@@ -1,0 +1,8 @@
+-- Initial schema migration
+--
+-- 採用する DB 製品とマイグレーションツールが決まったら、
+-- このファイルを最初のスキーマ定義に置き換えてください。
+--
+-- 例:
+-- CREATE TABLE card_sets (...);
+-- CREATE TABLE cards (...);
