@@ -14,3 +14,5 @@ V002__create_cards.sql
 ## seeds
 
 初期データやマスターデータを投入する SQL を配置します。開発環境用のデータと、本番でも必要なマスターデータは区別して管理します。
+
+seed SQL はUTF-8で保存し、先頭で `SET NAMES utf8mb4;` を実行します。Windowsの `mysql` クライアントから `SOURCE` で読み込む場合も、日本語をUTF-8として送信できます。

@@ -12,7 +12,7 @@
 | card_number | VARCHAR(64) | 不可 | カード番号。例: `BP03-109` |
 | name | VARCHAR(255) | 不可 | カード名 |
 | class_id | BIGINT UNSIGNED | 不可 | クラスへの外部キー |
-| rarity_id | BIGINT UNSIGNED | 不可 | レアリティへの外部キー |
+| rarity_id | BIGINT UNSIGNED | 可 | レアリティへの外部キー。リーダー・トークンなどレアリティ表記がないカードはNULL |
 | title_id | BIGINT UNSIGNED | 可 | コラボタイトルへの外部キー。非コラボはNULL |
 | cost | SMALLINT UNSIGNED | 可 | コスト |
 | power | SMALLINT UNSIGNED | 可 | 攻撃力。持たないカードはNULL |

@@ -1,0 +1,13 @@
+{
+  "name": "shadowverse-evolve-cardlist",
+  "private": true,
+  "scripts": {
+    "fetch:card-dom": "node scripts/fetch-card-dom.mjs",
+    "generate:seed": "node scripts/generate-seed-sql.mjs",
+    "install:browser": "playwright install chromium"
+  },
+  "devDependencies": {
+    "cheerio": "^1.2.0",
+    "playwright": "^1.51.1"
+  }
+}
