@@ -71,10 +71,10 @@ function cardFromHtml(html, fileName, expansion) {
   const cardNumber = path.basename(fileName, '.html');
   const className = fields.get('クラス');
   const kinds = split(fields.get('カード種類'));
-  const rarity = fields.get('レアリティ') ?? null;
+  const rarities = split(fields.get('レアリティ'));
   if (!CLASS_CODES.has(className)) throw new Error(`${cardNumber}: unknown class ${className}`);
   if (!kinds.length || kinds.some((kind) => !CARD_KIND_CODES.has(kind))) throw new Error(`${cardNumber}: unknown card kind`);
-  if (rarity && !RARITY_SORT_ORDERS.has(rarity)) throw new Error(`${cardNumber}: unknown rarity ${rarity}`);
+  if (rarities.some((rarity) => !RARITY_SORT_ORDERS.has(rarity))) throw new Error(`${cardNumber}: unknown rarity ${rarities.join('・')}`);
   const detail = root.find('.detail').first();
   const productSection = $('.cardlist-Detail_Products').first();
   const productHref = productSection.find('a[href*="expansion="]').first().attr('href');
@@ -82,7 +82,7 @@ function cardFromHtml(html, fileName, expansion) {
   const image = root.find('.img.w100 img').first().attr('src');
   return {
     cardNumber, name: nullable(root.find('.txt .ttl').first().text()), className, kinds,
-    types: split(fields.get('タイプ')), rarity, title: fields.get('タイトル') ?? null,
+    types: split(fields.get('タイプ')), rarities, title: fields.get('タイトル') ?? null,
     cost: statuses.get('Cost') ?? null, power: statuses.get('Power') ?? null, defense: statuses.get('Hp') ?? null,
     abilityText: detail.length ? detailText($, detail) : null,
     flavorText: nullable(root.find('.speech').first().text()),
@@ -98,7 +98,7 @@ function sql(expansion, cards) {
   const unique = (values) => [...new Set(values.filter(Boolean))].sort();
   const classNames = unique(cards.map((card) => card.className));
   const kinds = unique(cards.flatMap((card) => card.kinds));
-  const rarities = unique(cards.map((card) => card.rarity)).sort((a, b) => RARITY_SORT_ORDERS.get(a) - RARITY_SORT_ORDERS.get(b));
+  const rarities = unique(cards.flatMap((card) => card.rarities)).sort((a, b) => RARITY_SORT_ORDERS.get(a) - RARITY_SORT_ORDERS.get(b));
   const titles = unique(cards.map((card) => card.title));
   const types = unique(cards.flatMap((card) => card.types));
   const keywordNames = unique(cards.flatMap((card) => card.keywords));
@@ -120,11 +120,12 @@ function sql(expansion, cards) {
   insertMaster('products', 'code, name, product_type, release_date', products.map((product) => [string(product.code), string(product.name), string(productType(product.name)), string(product.releaseDate)]), 'name = VALUES(name), product_type = VALUES(product_type), release_date = VALUES(release_date)');
   insertMaster('types', 'name', types.map((name) => [string(name)]), 'name = VALUES(name)');
   insertMaster('keyword_abilities', 'name', keywordNames.map((name) => [string(name)]), 'name = VALUES(name)');
-  output.push('INSERT INTO cards (card_number, name, class_id, rarity_id, title_id, cost, power, defense, ability_text, flavor_text, illustrator_name, image_url) VALUES');
-  output.push(rows(cards.map((card) => [string(card.cardNumber), string(card.name), `(SELECT id FROM card_classes WHERE code = ${string(CLASS_CODES.get(card.className))})`, card.rarity ? `(SELECT id FROM rarities WHERE code = ${string(card.rarity)})` : 'NULL', card.title ? `(SELECT id FROM titles WHERE name = ${string(card.title)})` : 'NULL', number(card.cost), number(card.power), number(card.defense), string(card.abilityText), string(card.flavorText), string(card.illustratorName), string(card.imageUrl)])));
-  output.push('ON DUPLICATE KEY UPDATE name = VALUES(name), class_id = VALUES(class_id), rarity_id = VALUES(rarity_id), title_id = VALUES(title_id), cost = VALUES(cost), power = VALUES(power), defense = VALUES(defense), ability_text = VALUES(ability_text), flavor_text = VALUES(flavor_text), illustrator_name = VALUES(illustrator_name), image_url = VALUES(image_url);', '');
+  output.push('INSERT INTO cards (card_number, name, class_id, title_id, cost, power, defense, ability_text, flavor_text, illustrator_name, image_url) VALUES');
+  output.push(rows(cards.map((card) => [string(card.cardNumber), string(card.name), `(SELECT id FROM card_classes WHERE code = ${string(CLASS_CODES.get(card.className))})`, card.title ? `(SELECT id FROM titles WHERE name = ${string(card.title)})` : 'NULL', number(card.cost), number(card.power), number(card.defense), string(card.abilityText), string(card.flavorText), string(card.illustratorName), string(card.imageUrl)])));
+  output.push('ON DUPLICATE KEY UPDATE name = VALUES(name), class_id = VALUES(class_id), title_id = VALUES(title_id), cost = VALUES(cost), power = VALUES(power), defense = VALUES(defense), ability_text = VALUES(ability_text), flavor_text = VALUES(flavor_text), illustrator_name = VALUES(illustrator_name), image_url = VALUES(image_url);', '');
   const relations = (table, target, column, values, lookup = 'name') => { if (!values.length) return; output.push(`INSERT IGNORE INTO ${table} (card_id, ${column}) VALUES`, rows(values.map(([cardNumber, value]) => [`(SELECT id FROM cards WHERE card_number = ${string(cardNumber)})`, `(SELECT id FROM ${target} WHERE ${lookup} = ${string(value)})`])), ';', ''); };
   relations('card_card_kinds', 'card_kinds', 'card_kind_id', cards.flatMap((card) => card.kinds.map((kind) => [card.cardNumber, CARD_KIND_CODES.get(kind)])), 'code');
+  relations('card_rarities', 'rarities', 'rarity_id', cards.flatMap((card) => card.rarities.map((rarity) => [card.cardNumber, rarity])), 'code');
   relations('card_products', 'products', 'product_id', cards.map((card) => [card.cardNumber, card.product.code]), 'code');
   relations('card_types', 'types', 'type_id', cards.flatMap((card) => card.types.map((type) => [card.cardNumber, type])));
   relations('card_keyword_abilities', 'keyword_abilities', 'keyword_ability_id', cards.flatMap((card) => card.keywords.map((keyword) => [card.cardNumber, keyword])));

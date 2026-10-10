@@ -1,6 +1,6 @@
 # テーブル定義
 
-対象DBMSは MySQL 8.0 です。実行用DDLは [V001__initial_schema.sql](../../../db/migrations/V001__initial_schema.sql) にあります。
+対象DBMSは MySQL 8.0 です。実行用DDLは [db/migrations](../../../db/migrations/) にあります。V001の後にV002を適用してください。
 
 ## cards
 
@@ -12,7 +12,6 @@
 | card_number | VARCHAR(64) | 不可 | カード番号。例: `BP03-109` |
 | name | VARCHAR(255) | 不可 | カード名 |
 | class_id | BIGINT UNSIGNED | 不可 | クラスへの外部キー |
-| rarity_id | BIGINT UNSIGNED | 可 | レアリティへの外部キー。リーダー・トークンなどレアリティ表記がないカードはNULL |
 | title_id | BIGINT UNSIGNED | 可 | コラボタイトルへの外部キー。非コラボはNULL |
 | cost | SMALLINT UNSIGNED | 可 | コスト |
 | power | SMALLINT UNSIGNED | 可 | 攻撃力。持たないカードはNULL |
@@ -50,8 +49,9 @@
 | テーブル | 主キー | 関係 |
 |---|---|---|
 | card_card_kinds | card_id, card_kind_id | カードと複数カード種類の対応 |
+| card_rarities | card_id, rarity_id | カードと複数レアリティの対応 |
 | card_products | card_id, product_id | カードと収録商品の対応 |
 | card_types | card_id, type_id | カードと複数タイプの対応 |
 | card_keyword_abilities | card_id, keyword_ability_id | カードと複数キーワード能力の対応 |
 
-たとえば「ライルの人形」は、`card_card_kinds` にフォロワーとトークンの2行、`card_types` に人形と学院の2行を持ちます。
+たとえば、`GR・プレミアム` のカードは `card_rarities` にGRとプレミアムの2行を持ちます。レアリティ表記がないリーダー・トークンは、このテーブルに行を持ちません。

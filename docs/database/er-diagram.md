@@ -3,7 +3,8 @@
 ```mermaid
 erDiagram
     CARD_CLASSES ||--o{ CARDS : classifies
-    RARITIES ||--o{ CARDS : classifies
+    CARDS ||--o{ CARD_RARITIES : has
+    RARITIES ||--o{ CARD_RARITIES : classifies
     TITLES o|--o{ CARDS : labels
     CARDS ||--o{ CARD_CARD_KINDS : has
     CARD_KINDS ||--o{ CARD_CARD_KINDS : classifies
@@ -19,7 +20,6 @@ erDiagram
         varchar card_number UK
         varchar name
         bigint class_id FK
-        bigint rarity_id FK "nullable"
         bigint title_id FK "nullable"
         smallint cost "nullable"
         smallint power "nullable"
@@ -35,6 +35,10 @@ erDiagram
     CARD_CARD_KINDS {
         bigint card_id PK, FK
         bigint card_kind_id PK, FK
+    }
+    CARD_RARITIES {
+        bigint card_id PK, FK
+        bigint rarity_id PK, FK
     }
     PRODUCTS {
         bigint id PK
@@ -67,4 +71,4 @@ erDiagram
 
 `cards` が中心テーブルです。カード番号はこのテーブルの一意なカラムであり、別テーブルには分けません。
 
-カード種類、収録商品、タイプ、キーワード能力は、カードと多対多の関係です。そのため、それぞれ `card_card_kinds`、`card_products`、`card_types`、`card_keyword_abilities` を中間テーブルとして使用します。タイトルはコラボカードのみ設定するため、`cards.title_id` をNULL許容にしています。
+カード種類、レアリティ、収録商品、タイプ、キーワード能力は、カードと多対多の関係です。そのため、それぞれ `card_card_kinds`、`card_rarities`、`card_products`、`card_types`、`card_keyword_abilities` を中間テーブルとして使用します。タイトルはコラボカードのみ設定するため、`cards.title_id` をNULL許容にしています。

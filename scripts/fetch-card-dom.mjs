@@ -115,25 +115,55 @@ async function writeAtomically(filePath, content) {
   await rename(temporaryPath, filePath);
 }
 
-async function loadAllSearchResultCards(page) {
+function extractCardNumbersFromHtml(html) {
+  const cardNumbers = new Set();
+  const links = html.matchAll(/href\s*=\s*(["'])(.*?)\1/gi);
+
+  for (const match of links) {
+    const href = match[2].replaceAll("&amp;", "&");
+    const cardNumber = new URL(href, SITE_ORIGIN).searchParams.get("cardno");
+    if (cardNumber) cardNumbers.add(cardNumber);
+  }
+
+  return cardNumbers;
+}
+
+function searchResultPageUrl(searchUrl, pageNumber) {
+  const url = new URL(searchUrl);
+  url.pathname = "/cardlist/cardsearch_ex";
+  url.searchParams.set("page", String(pageNumber));
+  url.searchParams.set("t", String(Date.now()));
+  return url.toString();
+}
+
+async function loadAllSearchResultCards(page, searchUrl) {
   const cardLinks = page.locator('a[href*="cardno="]');
   await cardLinks.first().waitFor({ state: "attached", timeout: 15_000 });
 
-  let previousCount = 0;
-  let unchangedAttempts = 0;
+  const cardNumbers = new Set(await cardLinks.evaluateAll((links) => links.map((link) => {
+    const url = new URL(link.href, window.location.origin);
+    return url.searchParams.get("cardno");
+  }).filter(Boolean)));
+  const scripts = await page.locator("script").allTextContents();
+  const maxPage = Number(scripts.join("\n").match(/\bmax_page\s*=\s*(\d+)/)?.[1] ?? "1");
 
-  while (unchangedAttempts < 3) {
-    const currentCount = await cardLinks.count();
-    if (currentCount > previousCount) {
-      previousCount = currentCount;
-      unchangedAttempts = 0;
-    } else {
-      unchangedAttempts += 1;
+  for (let pageNumber = 2; pageNumber <= maxPage; pageNumber += 1) {
+    const url = searchResultPageUrl(searchUrl, pageNumber);
+    console.log(`Loading search result page ${pageNumber}/${maxPage}`);
+    const html = await page.evaluate(async (requestUrl) => {
+      const response = await fetch(requestUrl, { credentials: "same-origin" });
+      if (!response.ok) throw new Error(`Request failed with HTTP ${response.status}`);
+      return response.text();
+    }, url);
+    const pageCardNumbers = extractCardNumbersFromHtml(html);
+    if (pageCardNumbers.size === 0) {
+      throw new Error(`Search result page ${pageNumber} did not contain card detail links.`);
     }
-
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(750);
+    pageCardNumbers.forEach((cardNumber) => cardNumbers.add(cardNumber));
+    await page.waitForTimeout(250);
   }
+
+  return [...cardNumbers];
 }
 
 async function main() {
@@ -157,19 +187,10 @@ async function main() {
     console.log(`Fetching search results: ${searchUrl}`);
     await page.goto(searchUrl, { waitUntil: "domcontentloaded" });
     await page.waitForSelector("body");
-    await loadAllSearchResultCards(page);
+    const cardNumbers = await loadAllSearchResultCards(page, searchUrl);
 
     const searchResult = await page.locator("body").innerText();
     const expectedCount = Number(searchResult.match(/検索結果\s*(\d+)件/)?.[1] ?? "0");
-    const cardNumbers = await page.locator('a[href*="cardno="]').evaluateAll((links) => {
-      const values = new Set();
-      for (const link of links) {
-        const url = new URL(link.href, window.location.origin);
-        const cardNumber = url.searchParams.get("cardno");
-        if (cardNumber) values.add(cardNumber);
-      }
-      return [...values];
-    });
 
     const cards = [...new Set(cardNumbers)]
       .filter((cardNumber) => /^[A-Za-z0-9_-]+$/.test(cardNumber))
@@ -191,6 +212,11 @@ async function main() {
 
       if (!options.overwrite && existsSync(outputPath)) {
         console.log(`[${index + 1}/${cards.length}] Skipped ${cardNumber} (already saved)`);
+        manifest.cards[cardNumber] ??= {
+          source_url: sourceUrl,
+          file: `${cardNumber}.html`,
+          fetched_at: null,
+        };
         continue;
       }
 
