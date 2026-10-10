@@ -47,3 +47,11 @@ npm run generate:seed -- --expansion SD03 --output db/seeds/003__sd03_cards.sql
 ```
 
 カード番号、名称、クラス、カード種類、タイプ、レアリティ、ステータス、能力文、フレーバーテキスト、イラストレーター、画像URL、収録商品を抽出します。能力文内のアイコンは `【ファンファーレ】` の形式に変換し、キーワード能力はこの表記から正規化して登録します。ステータス・クラス・コストの表記はキーワード能力として登録しません。
+
+## 取込状況の更新
+
+対象となる収録商品コードは `config/expansion-targets.json` で管理します。DOM取得またはseed SQL生成の後に次を実行すると、[取込状況](../docs/database/import-status.md) を更新できます。
+
+```powershell
+npm run sync:import-status
+```

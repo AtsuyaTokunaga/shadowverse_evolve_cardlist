@@ -72,7 +72,7 @@ function cardFromHtml(html, fileName, expansion) {
   const className = fields.get('クラス');
   const kinds = split(fields.get('カード種類'));
   const rarities = split(fields.get('レアリティ'));
-  if (!CLASS_CODES.has(className)) throw new Error(`${cardNumber}: unknown class ${className}`);
+  if (className !== null && !CLASS_CODES.has(className)) throw new Error(`${cardNumber}: unknown class ${className}`);
   if (!kinds.length || kinds.some((kind) => !CARD_KIND_CODES.has(kind))) throw new Error(`${cardNumber}: unknown card kind`);
   if (rarities.some((rarity) => !RARITY_SORT_ORDERS.has(rarity))) throw new Error(`${cardNumber}: unknown rarity ${rarities.join('・')}`);
   const detail = root.find('.detail').first();
@@ -121,7 +121,7 @@ function sql(expansion, cards) {
   insertMaster('types', 'name', types.map((name) => [string(name)]), 'name = VALUES(name)');
   insertMaster('keyword_abilities', 'name', keywordNames.map((name) => [string(name)]), 'name = VALUES(name)');
   output.push('INSERT INTO cards (card_number, name, class_id, title_id, cost, power, defense, ability_text, flavor_text, illustrator_name, image_url) VALUES');
-  output.push(rows(cards.map((card) => [string(card.cardNumber), string(card.name), `(SELECT id FROM card_classes WHERE code = ${string(CLASS_CODES.get(card.className))})`, card.title ? `(SELECT id FROM titles WHERE name = ${string(card.title)})` : 'NULL', number(card.cost), number(card.power), number(card.defense), string(card.abilityText), string(card.flavorText), string(card.illustratorName), string(card.imageUrl)])));
+  output.push(rows(cards.map((card) => [string(card.cardNumber), string(card.name), card.className === null ? 'NULL' : `(SELECT id FROM card_classes WHERE code = ${string(CLASS_CODES.get(card.className))})`, card.title ? `(SELECT id FROM titles WHERE name = ${string(card.title)})` : 'NULL', number(card.cost), number(card.power), number(card.defense), string(card.abilityText), string(card.flavorText), string(card.illustratorName), string(card.imageUrl)])));
   output.push('ON DUPLICATE KEY UPDATE name = VALUES(name), class_id = VALUES(class_id), title_id = VALUES(title_id), cost = VALUES(cost), power = VALUES(power), defense = VALUES(defense), ability_text = VALUES(ability_text), flavor_text = VALUES(flavor_text), illustrator_name = VALUES(illustrator_name), image_url = VALUES(image_url);', '');
   const relations = (table, target, column, values, lookup = 'name') => { if (!values.length) return; output.push(`INSERT IGNORE INTO ${table} (card_id, ${column}) VALUES`, rows(values.map(([cardNumber, value]) => [`(SELECT id FROM cards WHERE card_number = ${string(cardNumber)})`, `(SELECT id FROM ${target} WHERE ${lookup} = ${string(value)})`])), ';', ''); };
   relations('card_card_kinds', 'card_kinds', 'card_kind_id', cards.flatMap((card) => card.kinds.map((kind) => [card.cardNumber, CARD_KIND_CODES.get(kind)])), 'code');

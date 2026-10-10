@@ -4,6 +4,7 @@
   "scripts": {
     "fetch:card-dom": "node scripts/fetch-card-dom.mjs",
     "generate:seed": "node scripts/generate-seed-sql.mjs",
+    "sync:import-status": "node scripts/sync-import-status.mjs",
     "install:browser": "playwright install chromium"
   },
   "devDependencies": {

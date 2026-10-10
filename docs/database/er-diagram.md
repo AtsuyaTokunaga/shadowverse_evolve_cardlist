@@ -19,7 +19,7 @@ erDiagram
         bigint id PK
         varchar card_number UK
         varchar name
-        bigint class_id FK
+        bigint class_id FK "nullable"
         bigint title_id FK "nullable"
         smallint cost "nullable"
         smallint power "nullable"

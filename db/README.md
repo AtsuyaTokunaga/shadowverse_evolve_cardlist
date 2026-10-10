@@ -11,11 +11,12 @@ V002__create_cards.sql
 
 適用済みのマイグレーションは編集せず、変更用の新しい SQL ファイルを追加します。
 
-複数のレアリティを持つカードに対応するため、現在はV001の後にV002まで適用します。
+複数レアリティとクラス表記がないカードに対応するため、現在はV001からV003まで順に適用します。
 
 ```sql
 SOURCE C:/Users/a28to/shadowverse_evolve_cardlist/db/migrations/V001__initial_schema.sql;
 SOURCE C:/Users/a28to/shadowverse_evolve_cardlist/db/migrations/V002__normalize_card_rarities.sql;
+SOURCE C:/Users/a28to/shadowverse_evolve_cardlist/db/migrations/V003__allow_cards_without_class.sql;
 ```
 
 ## seeds
